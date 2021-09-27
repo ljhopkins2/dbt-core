@@ -66,21 +66,6 @@ class NotADictionaryDeprecation(DBTDeprecation):
     '''
 
 
-class ColumnQuotingDeprecation(DBTDeprecation):
-    _name = 'column-quoting-unset'
-
-    _description = '''\
-    The quote_columns parameter was not set for seeds, so the default value of
-    False was chosen. The default will change to True in a future release.
-
-
-
-    For more information, see:
-
-    https://docs.getdbt.com/v0.15/docs/seeds#section-specify-column-quoting
-    '''
-
-
 class ModelsKeyNonModelDeprecation(DBTDeprecation):
     _name = 'models-key-mismatch'
 
@@ -94,15 +79,6 @@ class ModelsKeyNonModelDeprecation(DBTDeprecation):
     the {expected_key} key instead.
 
     This warning will become an error in a future release.
-    '''
-
-
-class ExecuteMacrosReleaseDeprecation(DBTDeprecation):
-    _name = 'execute-macro-release'
-    _description = '''\
-    The "release" argument to execute_macro is now ignored, and will be removed
-    in a future relase of dbt. At that time, providing a `release` argument
-    will result in an error.
     '''
 
 
@@ -163,9 +139,7 @@ active_deprecations: Set[str] = set()
 deprecations_list: List[DBTDeprecation] = [
     DispatchPackagesDeprecation(),
     NotADictionaryDeprecation(),
-    ColumnQuotingDeprecation(),
     ModelsKeyNonModelDeprecation(),
-    ExecuteMacrosReleaseDeprecation(),
     AdapterMacroDeprecation(),
     PackageRedirectDeprecation()
 ]
