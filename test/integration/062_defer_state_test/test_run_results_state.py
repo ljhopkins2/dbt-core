@@ -50,6 +50,7 @@ class TestModifiedState(DBTIntegrationTest):
         super().setUp()
         self.run_dbt(['seed'])
         self.run_dbt(['run'])
+        self.run_dbt(['test'])
         self.copy_state()
 
     # TODO: add a seed file that results in ERROR, then open it up to fix it, then run the seed command with result:error flag
