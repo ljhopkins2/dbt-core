@@ -44,7 +44,7 @@ class TestModifiedState(DBTIntegrationTest):
     def copy_state(self):
         assert not os.path.exists('state')
         os.makedirs('state')
-        shutil.copyfile('target/manifest.json', 'state/manifest.json')
+        shutil.copyfile('target/manifest.json', 'state/manifest.json', 'state/run_results.json') #TODO: ADD the run_results.json
 
     def setUp(self):
         super().setUp()
@@ -52,6 +52,8 @@ class TestModifiedState(DBTIntegrationTest):
         self.run_dbt(['run'])
         self.copy_state()
 
+    # TODO: add a seed file that results in ERROR, then open it up to fix it, then run the seed command with result:error flag
+    # TODO: follow the same pattern for the other states
     @use_profile('postgres')
     def test_postgres_changed_seed_contents_state(self):
         results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'], expect_pass=True)
@@ -152,6 +154,7 @@ class TestModifiedState(DBTIntegrationTest):
         assert len(results) == 1
         assert results[0].node.name == 'table_model'
 
+    #TODO: we can remove this entirely for macros as they do NOT have nodes to select from in run_results.json
     @use_profile('postgres')
     def test_postgres_new_macro(self):
         with open('macros/macros.sql') as fp:
@@ -202,3 +205,5 @@ class TestModifiedState(DBTIntegrationTest):
         results, stdout = self.run_dbt_and_capture(['run', '--models', '+state:modified', '--state', './state'])
         assert len(results) == 1
         assert results[0].node.name == 'view_model'
+
+# TODO: add test suite for build command scenarios, can resuse a lot of the content in dbt run test cases
