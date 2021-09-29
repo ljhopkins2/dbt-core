@@ -154,48 +154,6 @@ class TestModifiedState(DBTIntegrationTest):
         assert len(results) == 1
         assert results[0].node.name == 'table_model'
 
-    #TODO: we can remove this entirely for macros as they do NOT have nodes to select from in run_results.json
-    @use_profile('postgres')
-    def test_postgres_new_macro(self):
-        with open('macros/macros.sql') as fp:
-            fp.readline()
-            newline = fp.newlines
-
-        new_macro = '{% macro my_other_macro() %}{% endmacro %}' + newline
-
-        # add a new macro to a new file
-        with open('macros/second_macro.sql', 'w') as fp:
-            fp.write(new_macro)
-
-        results, stdout = self.run_dbt_and_capture(['run', '--models', 'state:modified', '--state', './state'])
-        assert len(results) == 0
-
-        os.remove('macros/second_macro.sql')
-        # add a new macro to the existing file
-        with open('macros/macros.sql', 'a') as fp:
-            fp.write(new_macro)
-
-        results, stdout = self.run_dbt_and_capture(['run', '--models', 'state:modified', '--state', './state'])
-        assert len(results) == 0
-
-    @use_profile('postgres')
-    def test_postgres_changed_macro_contents(self):
-        with open('macros/macros.sql') as fp:
-            fp.readline()
-            newline = fp.newlines
-
-        # modify an existing macro
-        with open('macros/macros.sql', 'w') as fp:
-            fp.write("{% macro my_macro() %}")
-            fp.write(newline)
-            fp.write("    {% do log('in a macro', info=True) %}")
-            fp.write(newline)
-            fp.write('{% endmacro %}')
-            fp.write(newline)
-
-        # table_model calls this macro
-        results, stdout = self.run_dbt_and_capture(['run', '--models', 'state:modified', '--state', './state'])
-        assert len(results) == 1
 
     @use_profile('postgres')
     def test_postgres_changed_exposure(self):
