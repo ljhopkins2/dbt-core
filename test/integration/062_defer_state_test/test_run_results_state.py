@@ -68,6 +68,7 @@ class TestRunResultsState(DBTIntegrationTest):
         self.copy_state()
         results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'result:success', '--state', './state'], expect_pass=True)
         assert len(results) == 1
+        assert results[0] == 'test.seed'
 
         results = self.run_dbt(['ls', '--select', 'result:success', '--state', './state'])
         assert len(results) == 1
@@ -77,18 +78,27 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 7
         assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
 
+        with open('data/seed.csv') as fp:
+            fp.readline()
+            newline = fp.newlines
+        with open('data/seed.csv', 'a') as fp:
+            fp.write(f'\"\'\'3,carl{newline}')
+        shutil.rmtree('./state')
 
-        # TODO: this is to introduce errors to the seed
-        # TODO: it exits the test once the seed errors out, need to make sure the rest of the test code is run
-        # with open('data/seed.csv') as fp:
-        #     fp.readline()
-        #     newline = fp.newlines
-        # with open('data/seed.csv', 'a') as fp:
-        #     fp.write(f'\"\'\'3,carl{newline}')
+        self.run_dbt(['seed'], expect_pass=False)
+        self.copy_state()
 
-        # self.run_dbt(['seed'], expect_pass=False)
-        # self.copy_state()
+        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'result:error', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
+        assert results[0] == 'test.seed'
 
+        results = self.run_dbt(['ls', '--select', 'result:error', '--state', './state'])
+        assert len(results) == 1
+        assert results[0] == 'test.seed'
+
+        results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
+        assert len(results) == 7
+        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
 
     @use_profile('postgres')
     def test_postgres_changed_seed_config(self):
