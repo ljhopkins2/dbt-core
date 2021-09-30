@@ -56,15 +56,14 @@ class TestRunResultsState(DBTIntegrationTest):
     # TODO: should we remove this setup altogether?
     def setUp(self):
         super().setUp()
-        # self.run_dbt(['seed'])
-        # self.run_dbt(['run'])
-        # self.run_dbt(['test'])
-        # self.copy_state()
+        self.run_dbt(['build'])
+        self.copy_state()
 
     # TODO: add a seed file that results in ERROR, then open it up to fix it, then run the seed command with result:error flag
     # TODO: follow the same pattern for the other states
     @use_profile('postgres')
     def test_postgres_seed_run_results_state(self):
+        shutil.rmtree('./state')
         self.run_dbt(['seed'])
         self.copy_state()
         results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'result:success', '--state', './state'], expect_pass=True)
