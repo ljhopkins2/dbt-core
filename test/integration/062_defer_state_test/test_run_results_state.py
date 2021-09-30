@@ -8,11 +8,16 @@ import pytest
 
 from dbt.exceptions import CompilationException
 
+########
 
-class TestModifiedState(DBTIntegrationTest):
+# Sung's test cases below
+
+########
+
+class TestRunResultsState(DBTIntegrationTest):
     @property
     def schema(self):
-        return "modified_state_062"
+        return "run_results_state_062"
 
     @property
     def models(self):
@@ -48,71 +53,42 @@ class TestModifiedState(DBTIntegrationTest):
         shutil.copyfile('target/run_results.json', 'state/run_results.json')
 
     #TODO: should this run 'build' because each of these steps may overwrite the previous command's state?
+    # TODO: should we remove this setup altogether?
     def setUp(self):
         super().setUp()
-        self.run_dbt(['seed'])
-        self.run_dbt(['run'])
-        self.run_dbt(['test'])
-        self.copy_state()
+        # self.run_dbt(['seed'])
+        # self.run_dbt(['run'])
+        # self.run_dbt(['test'])
+        # self.copy_state()
 
     # TODO: add a seed file that results in ERROR, then open it up to fix it, then run the seed command with result:error flag
     # TODO: follow the same pattern for the other states
     @use_profile('postgres')
-    def test_postgres_changed_seed_contents_state(self):
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'], expect_pass=True)
-        assert len(results) == 0
-        with open('data/seed.csv') as fp:
-            fp.readline()
-            newline = fp.newlines
-        with open('data/seed.csv', 'a') as fp:
-            fp.write(f'3,carl{newline}')
-
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'])
-        assert len(results) == 1
-        assert results[0] == 'test.seed'
-
-        results = self.run_dbt(['ls', '--select', 'state:modified', '--state', './state'])
-        assert len(results) == 1
-        assert results[0] == 'test.seed'
-
-        results = self.run_dbt(['ls', '--select', 'state:modified+', '--state', './state'])
-        assert len(results) == 7
-        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
-
-        shutil.rmtree('./state')
+    def test_postgres_seed_run_results_state(self):
+        self.run_dbt(['seed'])
         self.copy_state()
+        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'result:success', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
 
-        with open('data/seed.csv', 'a') as fp:
-            # assume each line is ~2 bytes + len(name)
-            target_size = 1*1024*1024
-            line_size = 64
-
-            num_lines = target_size // line_size
-
-            maxlines = num_lines + 4
-
-            for idx in range(4, maxlines):
-                value = ''.join(random.choices(string.ascii_letters, k=62))
-                fp.write(f'{idx},{value}{newline}')
-
-        # now if we run again, we should get a warning
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'])
+        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'result:success', '--state', './state'])
         assert len(results) == 1
         assert results[0] == 'test.seed'
 
-        with pytest.raises(CompilationException) as exc:
-            self.run_dbt(['--warn-error', 'ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'])
-        assert '>1MB' in str(exc.value)
+        results = self.run_dbt(['ls', '--select', 'result:success', '--state', './state'])
+        assert len(results) == 1
+        assert results[0] == 'test.seed'
 
-        shutil.rmtree('./state')
-        self.copy_state()
+        # TODO: this is to introduce errors to the seed
+        # TODO: it exits the test once the seed errors out, need to make sure the rest of the test code is run
+        # with open('data/seed.csv') as fp:
+        #     fp.readline()
+        #     newline = fp.newlines
+        # with open('data/seed.csv', 'a') as fp:
+        #     fp.write(f'\"\'\'3,carl{newline}')
 
-        # once it's in path mode, we don't mark it as modified if it changes
-        with open('data/seed.csv', 'a') as fp:
-            fp.write(f'{random},test{newline}')
+        # self.run_dbt(['seed'], expect_pass=False)
+        # self.copy_state()
 
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'], expect_pass=True)
-        assert len(results) == 0
 
     @use_profile('postgres')
     def test_postgres_changed_seed_config(self):
@@ -168,3 +144,9 @@ class TestModifiedState(DBTIntegrationTest):
         assert results[0].node.name == 'view_model'
 
 # TODO: add test suite for build command scenarios, can resuse a lot of the content in dbt run test cases
+
+########
+
+# Matt's test cases below
+
+########
