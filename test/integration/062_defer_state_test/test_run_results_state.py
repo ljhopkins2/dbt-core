@@ -44,8 +44,10 @@ class TestModifiedState(DBTIntegrationTest):
     def copy_state(self):
         assert not os.path.exists('state')
         os.makedirs('state')
-        shutil.copyfile('target/manifest.json', 'state/manifest.json', 'state/run_results.json') #TODO: ADD the run_results.json
+        shutil.copyfile('target/manifest.json', 'state/manifest.json')
+        shutil.copyfile('target/run_results.json', 'state/run_results.json')
 
+    #TODO: should this run 'build' because each of these steps may overwrite the previous command's state?
     def setUp(self):
         super().setUp()
         self.run_dbt(['seed'])
