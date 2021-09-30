@@ -52,15 +52,11 @@ class TestRunResultsState(DBTIntegrationTest):
         shutil.copyfile('target/manifest.json', 'state/manifest.json')
         shutil.copyfile('target/run_results.json', 'state/run_results.json')
 
-    #TODO: should this run 'build' because each of these steps may overwrite the previous command's state?
-    # TODO: should we remove this setup altogether?
     def setUp(self):
         super().setUp()
         self.run_dbt(['build'])
         self.copy_state()
 
-    # TODO: add a seed file that results in ERROR, then open it up to fix it, then run the seed command with result:error flag
-    # TODO: follow the same pattern for the other states
     @use_profile('postgres')
     def test_postgres_seed_run_results_state(self):
         shutil.rmtree('./state')
