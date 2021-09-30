@@ -162,6 +162,20 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 6 # includes exposure
         assert set(results) == {'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
 
+        # test failure on build tests
+        # fail the unique test
+        with open('models/view_model.sql', 'w') as fp:
+            fp.write(newline)
+            fp.write("select 1 as id union all select 1 as id")
+            fp.write(newline)
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=False)
+        self.copy_state()
+
+        results = self.run_dbt(['build', '--select', 'result:fail', '--state', './state'], expect_pass=False)
+        assert len(results) == 1
+        assert results[0].node.name == 'unique_view_model_id'
 
 ########
 
