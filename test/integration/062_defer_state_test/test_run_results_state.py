@@ -128,59 +128,40 @@ class TestRunResultsState(DBTIntegrationTest):
         assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
 
     @use_profile('postgres')
-    def test_postgres_changed_seed_config(self):
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'], expect_pass=True)
+    def test_postgres_build_run_results_state(self):
+        results = self.run_dbt(['build', '--select', 'result:error', '--state', './state'])
         assert len(results) == 0
 
-        self.use_default_project({'seeds': {'test': {'quote_columns': False}}})
-
-        # quoting change -> seed changed
-        results = self.run_dbt(['ls', '--resource-type', 'seed', '--select', 'state:modified', '--state', './state'])
-        assert len(results) == 1
-        assert results[0] == 'test.seed'
-
-    @use_profile('postgres')
-    def test_postgres_unrendered_config_same(self):
-        results = self.run_dbt(['ls', '--resource-type', 'model', '--select', 'state:modified', '--state', './state'], expect_pass=True)
-        assert len(results) == 0
-
-        # although this is the default value, dbt will recognize it as a change
-        # for previously-unconfigured models, because it's been explicitly set
-        self.use_default_project({'models': {'test': {'materialized': 'view'}}})
-        results = self.run_dbt(['ls', '--resource-type', 'model', '--select', 'state:modified', '--state', './state'])
-        assert len(results) == 1
-        assert results[0] == 'test.view_model'
-
-    @use_profile('postgres')
-    def test_postgres_changed_model_contents(self):
-        results = self.run_dbt(['run', '--models', 'state:modified', '--state', './state'])
-        assert len(results) == 0
-
-        with open('models/table_model.sql') as fp:
+        with open('models/view_model.sql') as fp:
             fp.readline()
             newline = fp.newlines
 
-        with open('models/table_model.sql', 'w') as fp:
-            fp.write("{{ config(materialized='table') }}")
+        with open('models/view_model.sql', 'w') as fp:
             fp.write(newline)
-            fp.write("select * from {{ ref('seed') }}")
+            fp.write("select * from forced_error")
             fp.write(newline)
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=False)
+        self.copy_state()
 
-        results = self.run_dbt(['run', '--models', 'state:modified', '--state', './state'])
-        assert len(results) == 1
-        assert results[0].node.name == 'table_model'
+        results = self.run_dbt(['build', '--select', 'result:error', '--state', './state'], expect_pass=False)
+        assert len(results) == 3
+        assert results[0].node.name == 'view_model'
+        results = self.run_dbt(['ls', '--select', 'result:error', '--state', './state'])
+        assert len(results) == 3
+        assert set(results) == {'test.view_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id'}
 
-
-    @use_profile('postgres')
-    def test_postgres_changed_exposure(self):
-        with open('models/exposures.yml', 'a') as fp:
-            fp.write('      name: John Doe\n')
-
-        results, stdout = self.run_dbt_and_capture(['run', '--models', '+state:modified', '--state', './state'])
-        assert len(results) == 1
+        results = self.run_dbt(['build', '--select', 'result:error+', '--state', './state'], expect_pass=False)
+        assert len(results) == 4
         assert results[0].node.name == 'view_model'
 
-# TODO: add test suite for build command scenarios, can resuse a lot of the content in dbt run test cases
+        #TODO: this feel wrong, I expect 4, but ls may work differently with node selection
+        results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
+        print(results)
+        assert len(results) == 6 # includes exposure
+        assert set(results) == {'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
+
 
 ########
 
