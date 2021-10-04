@@ -177,6 +177,20 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 1
         assert results[0].node.name == 'unique_view_model_id'
 
+        results = self.run_dbt(['ls', '--select', 'result:fail', '--state', './state'])
+        assert len(results) == 1
+        assert results[0] == 'test.schema_test.unique_view_model_id'
+
+        # results = self.run_dbt(['build', '--select', 'unique_view_model_id+', '--state', './state'], expect_pass=False)
+        # assert len(results) == 1
+        # assert results[0].node.name == 'unique_view_model_id'
+
+        # results = self.run_dbt(['ls', '--select', 'result:fail+', '--state', './state'])
+        # print(results)
+        # assert len(results) == 1
+        # assert set(results) == {'test.schema_test.unique_view_model_id'}
+
+
 ########
 
 # Matt's test cases below
