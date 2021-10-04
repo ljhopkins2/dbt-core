@@ -72,7 +72,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['ls', '--select', 'result:success+', '--state', './state'])
         assert len(results) == 7
-        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
+        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
         with open('data/seed.csv') as fp:
             fp.readline()
@@ -93,7 +93,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
         assert len(results) == 7
-        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
+        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
 
         with open('data/seed.csv') as fp:
@@ -125,7 +125,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
         assert len(results) == 7
-        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
+        assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
     @use_profile('postgres')
     def test_postgres_build_run_results_state(self):
@@ -189,7 +189,7 @@ class TestRunResultsState(DBTIntegrationTest):
         # results = self.run_dbt(['ls', '--select', 'result:fail+', '--state', './state'])
         # print(results)
         # assert len(results) == 1
-        # assert set(results) == {'test.schema_test.unique_view_model_id'}
+        # assert set(results) == {'test.unique_view_model_id'}
 
 
 ########
