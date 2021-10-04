@@ -148,9 +148,10 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['build', '--select', 'result:error', '--state', './state'], expect_pass=False)
         assert len(results) == 3
         assert results[0].node.name == 'view_model'
+
         results = self.run_dbt(['ls', '--select', 'result:error', '--state', './state'])
         assert len(results) == 3
-        assert set(results) == {'test.view_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id'}
+        assert set(results) == {'test.view_model', 'test.not_null_view_model_id', 'test.unique_view_model_id'}
 
         results = self.run_dbt(['build', '--select', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 4
@@ -160,7 +161,7 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
         print(results)
         assert len(results) == 6 # includes exposure
-        assert set(results) == {'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.schema_test.not_null_view_model_id', 'test.schema_test.unique_view_model_id', 'exposure:test.my_exposure'}
+        assert set(results) == {'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
         # test failure on build tests
         # fail the unique test
@@ -179,7 +180,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['ls', '--select', 'result:fail', '--state', './state'])
         assert len(results) == 1
-        assert results[0] == 'test.schema_test.unique_view_model_id'
+        assert results[0] == 'test.unique_view_model_id'
 
         # results = self.run_dbt(['build', '--select', 'unique_view_model_id+', '--state', './state'], expect_pass=False)
         # assert len(results) == 1
