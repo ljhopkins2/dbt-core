@@ -213,6 +213,17 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['ls', '--select', 'result:warn', '--state', './state'])
         assert len(results) == 1
         assert results[0] == 'test.unique_view_model_id'
+
+        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
+        results = self.run_dbt(['build', '--select', 'result:warn+', '--state', './state'], expect_pass=True)
+        assert len(results) == 2 # includes table_model to be run
+        assert results[0].node.name == 'unique_view_model_id'
+
+        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
+        results = self.run_dbt(['ls', '--select', 'result:warn+', '--state', './state'])
+        print(results)
+        assert len(results) == 2
+        assert set(results) == {'test.table_model', 'test.unique_view_model_id'}
 ########
 
 # Matt's test cases below
