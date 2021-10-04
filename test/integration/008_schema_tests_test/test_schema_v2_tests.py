@@ -148,7 +148,7 @@ class TestCustomConfigSchemaTests(DBTIntegrationTest):
         this project will fail, configs are set to make test pass. """
         results = self.run_dbt(['test'], expect_pass=False)
 
-        self.assertEqual(len(results), 7)
+        self.assertEqual(len(results), 8)
         for result in results:
             self.assertFalse(result.skipped)
 
@@ -248,55 +248,6 @@ class TestCustomSchemaTests(DBTIntegrationTest):
             if result.status == 'fail':
                 self.assertIn(result.node.name, expected_failures)
 
-
-class TestBQSchemaTests(DBTIntegrationTest):
-    @property
-    def schema(self):
-        return "schema_tests_008"
-
-    @property
-    def models(self):
-        return "models-v2/bq-models"
-
-    @staticmethod
-    def dir(path):
-        return os.path.normpath(
-            os.path.join('models-v2', path))
-
-    def run_schema_validations(self):
-        args = FakeArgs()
-
-        test_task = TestTask(args, self.config)
-        return test_task.run()
-
-    @use_profile('bigquery')
-    def test_schema_tests_bigquery(self):
-        self.use_default_project({'data-paths': [self.dir('seed')]})
-        self.assertEqual(len(self.run_dbt(['seed'])), 1)
-        results = self.run_dbt()
-        self.assertEqual(len(results), 1)
-        test_results = self.run_schema_validations()
-        self.assertEqual(len(test_results), 8)
-
-        for result in test_results:
-            # assert that all deliberately failing tests actually fail
-            if 'failure' in result.node.name:
-                self.assertEqual(result.status, 'fail')
-                self.assertFalse(result.skipped)
-                self.assertTrue(
-                    result.failures > 0,
-                    'test {} did not fail'.format(result.node.name)
-                )
-            # assert that actual tests pass
-            else:
-                self.assertEqual(result.status, 'pass')
-                self.assertFalse(result.skipped)
-                self.assertEqual(
-                    result.failures, 0,
-                    'test {} failed'.format(result.node.name)
-                )
-
-        self.assertEqual(sum(x.failures for x in test_results), 0)
 
 class TestQuotedSchemaTestColumns(DBTIntegrationTest):
     @property
@@ -557,4 +508,22 @@ class TestInvalidSchema(DBTIntegrationTest):
         with self.assertRaises(CompilationException) as exc:
             results = self.run_dbt()
         self.assertRegex(str(exc.exception), r"'models' is not a list")
+
+
+class TestWrongSpecificationBlock(DBTIntegrationTest):
+    @property
+    def schema(self):
+        return "schema_tests_008"
+
+    @property
+    def models(self):
+        return "wrong_specification_block"
+
+    @use_profile('postgres')
+    def test_postgres_wrong_specification_block(self):
+        with self.assertWarns(Warning):
+            results = self.run_dbt(['ls', '-s', 'some_seed', '--output', 'json', '--output-keys', 'name, description'])
+
+        assert len(results) == 1
+        assert results[0] == '{"name": "some_seed", "description": ""}'
 

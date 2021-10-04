@@ -1,9 +1,18 @@
 ## dbt 1.0.0 (Release TBD)
 
+### Breaking changes
+
+- The two type of test definitions are now "singular" and "generic" (instead of "data" and "schema", respectively). The `test_type:` selection method accepts `test_type:singular` and `test_type:generic`. (It will also accept `test_type:schema` and `test_type:data` for backwards compatibility) ([#3234](https://github.com/dbt-labs/dbt/issues/3234), [#3880](https://github.com/dbt-labs/dbt/pull/3880)). **Not backwards compatible:** The `--data` and `--schema` flags to `dbt test` are no longer supported, and tests no longer have the tags `'data'` and `'schema'` automatically applied.
+
 ### Features
 - Normalize global CLI arguments/flags ([#2990](https://github.com/dbt-labs/dbt/issues/2990), [#3839](https://github.com/dbt-labs/dbt/pull/3839))
+- Turns on the static parser by default and adds the flag `--no-static-parser` to disable it. ([#3377](https://github.com/dbt-labs/dbt/issues/3377), [#3939](https://github.com/dbt-labs/dbt/pull/3939))
+- Generic test FQNs have changed to include the relative path, resource, and column (if applicable) where they are defined. This makes it easier to configure them from the `tests` block in `dbt_project.yml` ([#3259](https://github.com/dbt-labs/dbt/pull/3259), [#3880](https://github.com/dbt-labs/dbt/pull/3880)
+- Turn on partial parsing by default ([#3867](https://github.com/dbt-labs/dbt/issues/3867), [#3989](https://github.com/dbt-labs/dbt/issues/3989))
 
 ### Fixes
+- Add generic tests defined on sources to the manifest once, not twice ([#3347](https://github.com/dbt-labs/dbt/issues/3347), [#3880](https://github.com/dbt-labs/dbt/pull/3880))
+- Skip partial parsing if certain macros have changed ([#3810](https://github.com/dbt-labs/dbt/issues/3810), [#3982](https://github.com/dbt-labs/dbt/pull/3892))
 
 ### Under the hood
 
@@ -11,17 +20,22 @@
 - Build catalog for only relational, non-ephemeral nodes in the graph ([#3920](https://github.com/dbt-labs/dbt/issues/3920))
 - Enact deprecation to remove the `release` arg from the `execute_macro` method. ([#3900](https://github.com/dbt-labs/dbt/issues/3900))
 - Enact deprecation for default quoting to be True.  Override for the `dbt-snowflake` adapter so it stays `False`. ([#3898](https://github.com/dbt-labs/dbt/issues/3898))
+- Enact deprecation for object used as dictionaries when they should be dataclasses. Replace deprecation warning with an exception for the dunder methods of `__iter__` and `__len__` for all superclasses of FakeAPIObject. ([#3897](https://github.com/dbt-labs/dbt/issues/3897))
+- Enact deprecation for `adapter-macro` and replace deprecation warning with an exception. ([#3901](https://github.com/dbt-labs/dbt/issues/3901))
+- Add warning when trying to put a node under the wrong key.  ie. A seed under models in a `schema.yml` file. ([#3899](https://github.com/dbt-labs/dbt/issues/3899))
+- Plugins for `redshift`, `snowflake`, and `bigquery` have moved to separate repos: [`dbt-redshift`](https://github.com/dbt-labs/dbt-redshift), [`dbt-snowflake`](https://github.com/dbt-labs/dbt-snowflake), [`dbt-bigquery`](https://github.com/dbt-labs/dbt-bigquery)
 
 Contributors:
 
 - [@dave-connors-3](https://github.com/dave-connors-3) ([#3920](https://github.com/dbt-labs/dbt/issues/3920))
-
+- [@kadero](https://github.com/kadero) ([#3952](https://github.com/dbt-labs/dbt/issues/3952))
 
 ## dbt 0.21.0 (Release TBD)
 
 ### Fixes
 - Fix batching for large seeds on Snowflake ([#3941](https://github.com/dbt-labs/dbt/issues/3941), [#3942](https://github.com/dbt-labs/dbt/pull/3942))
 - Avoid infinite recursion in `state:modified.macros` check ([#3904](https://github.com/dbt-labs/dbt/issues/3904), [#3957](https://github.com/dbt-labs/dbt/pull/3957))
+- Cast log messages to strings before scrubbing of prefixed env vars ([#3971](https://github.com/dbt-labs/dbt/issues/3971), [#3972](https://github.com/dbt-labs/dbt/pull/3972))
 
 ### Under the hood
 - Bump artifact schema versions for 0.21.0 ([#3945](https://github.com/dbt-labs/dbt/pull/3945))

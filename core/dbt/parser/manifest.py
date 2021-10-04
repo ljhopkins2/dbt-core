@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import datetime
 import os
 import traceback
 from typing import (
@@ -29,7 +30,7 @@ from dbt.context.configured import generate_macro_context
 from dbt.context.providers import ParseProvider
 from dbt.contracts.files import FileHash, ParseFileType, SchemaSourceFile
 from dbt.parser.read_files import read_files, load_source_file
-from dbt.parser.partial import PartialParsing
+from dbt.parser.partial import PartialParsing, special_override_macros
 from dbt.contracts.graph.compiled import ManifestNode
 from dbt.contracts.graph.manifest import (
     Manifest, Disabled, MacroManifest, ManifestStateCheck, ParsingInfo
@@ -47,7 +48,7 @@ from dbt.exceptions import (
 )
 from dbt.parser.base import Parser
 from dbt.parser.analysis import AnalysisParser
-from dbt.parser.data_test import DataTestParser
+from dbt.parser.singular_test import SingularTestParser
 from dbt.parser.docs import DocumentationParser
 from dbt.parser.hooks import HookParser
 from dbt.parser.macros import MacroParser
@@ -130,7 +131,9 @@ class ManifestLoader:
         self.root_project: RuntimeConfig = root_project
         self.all_projects: Mapping[str, Project] = all_projects
         self.manifest: Manifest = Manifest()
+        self.new_manifest = self.manifest
         self.manifest.metadata = root_project.get_metadata()
+        self.macro_resolver = None  # built after macros are loaded
         self.started_at = int(time.time())
         # This is a MacroQueryStringSetter callable, which is called
         # later after we set the MacroManifest in the adapter. It sets
@@ -149,6 +152,7 @@ class ManifestLoader:
         # We need to know if we're actually partially parsing. It could
         # have been enabled, but not happening because of some issue.
         self.partially_parsing = False
+        self.partial_parser = None
 
         # This is a saved manifest from a previous run that's used for partial parsing
         self.saved_manifest: Optional[Manifest] = self.read_manifest_for_partial_parse()
@@ -207,13 +211,14 @@ class ManifestLoader:
             saved_files = self.saved_manifest.files
         for project in self.all_projects.values():
             read_files(project, self.manifest.files, project_parser_files, saved_files)
+        orig_project_parser_files = project_parser_files
         self._perf_info.path_count = len(self.manifest.files)
         self._perf_info.read_files_elapsed = (time.perf_counter() - start_read_files)
 
         skip_parsing = False
         if self.saved_manifest is not None:
-            partial_parsing = PartialParsing(self.saved_manifest, self.manifest.files)
-            skip_parsing = partial_parsing.skip_parsing()
+            self.partial_parser = PartialParsing(self.saved_manifest, self.manifest.files)
+            skip_parsing = self.partial_parser.skip_parsing()
             if skip_parsing:
                 # nothing changed, so we don't need to generate project_parser_files
                 self.manifest = self.saved_manifest
@@ -223,7 +228,7 @@ class ManifestLoader:
                 # files are different, we need to create a new set of
                 # project_parser_files.
                 try:
-                    project_parser_files = partial_parsing.get_parsing_files()
+                    project_parser_files = self.partial_parser.get_parsing_files()
                     self.partially_parsing = True
                     self.manifest = self.saved_manifest
                 except Exception:
@@ -245,7 +250,7 @@ class ManifestLoader:
 
                     # get file info for local logs
                     parse_file_type = None
-                    file_id = partial_parsing.processing_file
+                    file_id = self.partial_parser.processing_file
                     if file_id and file_id in self.manifest.files:
                         old_file = self.manifest.files[file_id]
                         parse_file_type = old_file.parse_file_type
@@ -270,20 +275,19 @@ class ManifestLoader:
             # We need to parse the macros first, so they're resolvable when
             # the other files are loaded
             start_load_macros = time.perf_counter()
-            for project in self.all_projects.values():
-                if project.project_name not in project_parser_files:
-                    continue
-                parser_files = project_parser_files[project.project_name]
-                if 'MacroParser' not in parser_files:
-                    continue
-                parser = MacroParser(project, self.manifest)
-                for file_id in parser_files['MacroParser']:
-                    block = FileBlock(self.manifest.files[file_id])
-                    parser.parse_file(block)
-                    # increment parsed path count for performance tracking
-                    self._perf_info.parsed_path_count = self._perf_info.parsed_path_count + 1
-            # Look at changed macros and update the macro.depends_on.macros
-            self.macro_depends_on()
+            self.load_and_parse_macros(project_parser_files)
+
+            # If we're partially parsing check that certain macros have not been changed
+            if self.partially_parsing and self.skip_partial_parsing_because_of_macros():
+                logger.info(
+                    "Change detected to override macro used during parsing. Starting full parse."
+                )
+                # Get new Manifest with original file records and move over the macros
+                self.manifest = self.new_manifest  # contains newly read files
+                project_parser_files = orig_project_parser_files
+                self.partially_parsing = False
+                self.load_and_parse_macros(project_parser_files)
+
             self._perf_info.load_macros_elapsed = (time.perf_counter() - start_load_macros)
 
             # Now that the macros are parsed, parse the rest of the files.
@@ -292,7 +296,7 @@ class ManifestLoader:
 
             # Load the rest of the files except for schema yaml files
             parser_types: List[Type[Parser]] = [
-                ModelParser, SnapshotParser, AnalysisParser, DataTestParser,
+                ModelParser, SnapshotParser, AnalysisParser, SingularTestParser,
                 SeedParser, DocumentationParser, HookParser]
             for project in self.all_projects.values():
                 if project.project_name not in project_parser_files:
@@ -334,21 +338,12 @@ class ManifestLoader:
                 time.perf_counter() - start_patch
             )
 
-            # ParseResults had a 'disabled' attribute which was a dictionary
-            # which is now named '_disabled'. This used to copy from
-            # ParseResults to the Manifest.
-            # TODO: normalize to only one disabled
-            disabled = []
-            for value in self.manifest._disabled.values():
-                disabled.extend(value)
-            self.manifest.disabled = disabled
-
             # copy the selectors from the root_project to the manifest
             self.manifest.selectors = self.root_project.manifest_selectors
 
             # update the refs, sources, and docs
             # These check the created_at time on the nodes to
-            # determine whether they need processinga.
+            # determine whether they need processing.
             start_process = time.perf_counter()
             self.process_sources(self.root_project.project_name)
             self.process_refs(self.root_project.project_name)
@@ -369,6 +364,24 @@ class ManifestLoader:
             self.write_manifest_for_partial_parse()
 
         return self.manifest
+
+    def load_and_parse_macros(self, project_parser_files):
+        for project in self.all_projects.values():
+            if project.project_name not in project_parser_files:
+                continue
+            parser_files = project_parser_files[project.project_name]
+            if 'MacroParser' not in parser_files:
+                continue
+            parser = MacroParser(project, self.manifest)
+            for file_id in parser_files['MacroParser']:
+                block = FileBlock(self.manifest.files[file_id])
+                parser.parse_file(block)
+                # increment parsed path count for performance tracking
+                self._perf_info.parsed_path_count = self._perf_info.parsed_path_count + 1
+
+        self.build_macro_resolver()
+        # Look at changed macros and update the macro.depends_on.macros
+        self.macro_depends_on()
 
     # Parse the files in the 'parser_files' dictionary, for parsers listed in
     # 'parser_types'
@@ -440,20 +453,23 @@ class ManifestLoader:
             self._perf_info.parsed_path_count + total_parsed_path_count
         )
 
-    # Loop through macros in the manifest and statically parse
-    # the 'macro_sql' to find depends_on.macros
-    def macro_depends_on(self):
+    # This should only be called after the macros have been loaded
+    def build_macro_resolver(self):
         internal_package_names = get_adapter_package_names(
             self.root_project.credentials.type
         )
-        macro_resolver = MacroResolver(
+        self.macro_resolver = MacroResolver(
             self.manifest.macros,
             self.root_project.project_name,
             internal_package_names
         )
+
+    # Loop through macros in the manifest and statically parse
+    # the 'macro_sql' to find depends_on.macros
+    def macro_depends_on(self):
         macro_ctx = generate_macro_context(self.root_project)
         macro_namespace = TestMacroNamespace(
-            macro_resolver, {}, None, MacroStack(), []
+            self.macro_resolver, {}, None, MacroStack(), []
         )
         adapter = get_adapter(self.root_project)
         db_wrapper = ParseProvider().DatabaseWrapper(
@@ -472,7 +488,7 @@ class ManifestLoader:
                 package_name = macro.package_name
                 if '.' in macro_name:
                     package_name, macro_name = macro_name.split('.')
-                dep_macro_id = macro_resolver.get_macro_id(package_name, macro_name)
+                dep_macro_id = self.macro_resolver.get_macro_id(package_name, macro_name)
                 if dep_macro_id:
                     macro.depends_on.add_macro(dep_macro_id)  # will check for dupes
 
@@ -538,6 +554,21 @@ class ManifestLoader:
                     reparse_reason = ReparseReason.project_config_changed
         return valid, reparse_reason
 
+    def skip_partial_parsing_because_of_macros(self):
+        if not self.partial_parser:
+            return False
+        if self.partial_parser.deleted_special_override_macro:
+            return True
+        # Check for custom versions of these special macros
+        for macro_name in special_override_macros:
+            macro = self.macro_resolver.get_macro(None, macro_name)
+            if macro and macro.package_name != 'dbt':
+                if (macro.file_id in self.partial_parser.file_diff['changed'] or
+                        macro.file_id in self.partial_parser.file_diff['added']):
+                    # The file with the macro in it has changed
+                    return True
+        return False
+
     def read_manifest_for_partial_parse(self) -> Optional[Manifest]:
         if not flags.PARTIAL_PARSE:
             logger.debug('Partial parsing not enabled')
@@ -557,6 +588,13 @@ class ManifestLoader:
                 # different version of dbt
                 is_partial_parseable, reparse_reason = self.is_partial_parsable(manifest)
                 if is_partial_parseable:
+                    # We don't want to have stale generated_at dates
+                    manifest.metadata.generated_at = datetime.utcnow()
+                    # or invocation_ids
+                    if dbt.tracking.active_user:
+                        manifest.metadata.invocation_id = dbt.tracking.active_user.invocation_id
+                    else:
+                        manifest.metadata.invocation_id = None
                     return manifest
             except Exception as exc:
                 logger.debug(
@@ -577,7 +615,7 @@ class ManifestLoader:
     def build_perf_info(self):
         mli = ManifestLoaderInfo(
             is_partial_parse_enabled=flags.PARTIAL_PARSE,
-            is_static_analysis_enabled=flags.USE_EXPERIMENTAL_PARSER
+            is_static_analysis_enabled=flags.STATIC_PARSER
         )
         for project in self.all_projects.values():
             project_info = ProjectLoaderInfo(
@@ -855,7 +893,7 @@ def _warn_for_unused_resource_config_paths(
     manifest: Manifest, config: RuntimeConfig
 ) -> None:
     resource_fqns: Mapping[str, PathSet] = manifest.get_resource_fqns()
-    disabled_fqns: PathSet = frozenset(tuple(n.fqn) for n in manifest.disabled)
+    disabled_fqns: PathSet = frozenset(tuple(n.fqn) for n in manifest.disabled.values())
     config.warn_for_unused_resource_config_paths(resource_fqns, disabled_fqns)
 
 
