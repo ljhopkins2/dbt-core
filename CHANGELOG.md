@@ -3,6 +3,7 @@
 ### Breaking changes
 
 - The two type of test definitions are now "singular" and "generic" (instead of "data" and "schema", respectively). The `test_type:` selection method accepts `test_type:singular` and `test_type:generic`. (It will also accept `test_type:schema` and `test_type:data` for backwards compatibility) ([#3234](https://github.com/dbt-labs/dbt/issues/3234), [#3880](https://github.com/dbt-labs/dbt/pull/3880)). **Not backwards compatible:** The `--data` and `--schema` flags to `dbt test` are no longer supported, and tests no longer have the tags `'data'` and `'schema'` automatically applied.
+- Deprecated the use of the `packages` arg `adapter.dispatch` in favor of the `macro_namespace` arg. ([#3895](https://github.com/dbt-labs/dbt/issues/3895))
 
 ### Features
 - Normalize global CLI arguments/flags ([#2990](https://github.com/dbt-labs/dbt/issues/2990), [#3839](https://github.com/dbt-labs/dbt/pull/3839))
@@ -30,7 +31,9 @@ Contributors:
 - [@dave-connors-3](https://github.com/dave-connors-3) ([#3920](https://github.com/dbt-labs/dbt/issues/3920))
 - [@kadero](https://github.com/kadero) ([#3952](https://github.com/dbt-labs/dbt/issues/3952))
 
-## dbt 0.21.0 (Release TBD)
+## dbt 0.21.0 (October 04, 2021)
+
+## dbt 0.21.0rc2 (September 27, 2021)
 
 ### Fixes
 - Fix batching for large seeds on Snowflake ([#3941](https://github.com/dbt-labs/dbt/issues/3941), [#3942](https://github.com/dbt-labs/dbt/pull/3942))
