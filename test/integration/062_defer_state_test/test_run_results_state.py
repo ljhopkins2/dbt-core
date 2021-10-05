@@ -246,23 +246,20 @@ class TestRunResultsState(DBTIntegrationTest):
         self.copy_state()
 
         # modify another dbt model
-        with open('models/table_model.sql', 'r') as fp:
-            contents = fp.readlines()
-
-        contents.insert(2, '--modified-state-comment')
-
-        with open('models/table_model.sql', 'w') as fp:
-            contents = "".join(contents)
-            fp.write(contents)
-
-        results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
-        assert len(results) == 2
-        assert results[0].node.name == 'view_model'
-        assert results[1].node.name == 'table_model'
+        with open('models/table_model_modified_example.sql', 'w') as fp:
+            fp.write(newline)
+            fp.write("select * from forced_error")
+            fp.write(newline)
         
-        # results = self.run_dbt(['ls', '--resource-type', 'model', '--select', 'state:modified+', 'result:error+', '--state', './state'])
-        # assert len(results) == 3
-        # assert set(results) == {'test.view_model', 'test.table_model'}
+        #TODO: why is ephemeral_model not in the state?
+        # When I change it to a table materialization, it makes it into the run_results.json. This may be intentional behavior.
+        results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
+        assert len(results) == 3
+        # node index changes with each test invocation
+        assert results[0].node.name == 'table_model_modified_example'
+        assert results[1].node.name == 'view_model'
+        assert results[2].node.name == 'table_model'
+        
 
 
 ########
