@@ -228,7 +228,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_run_results_state(self):
-        results = self.run_dbt(['run', '--select', 'state:modified', 'result:error', '--state', './state'])
+        results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'])
         assert len(results) == 0
 
         # force an error on a dbt model
@@ -255,7 +255,7 @@ class TestRunResultsState(DBTIntegrationTest):
             contents = "".join(contents)
             fp.write(contents)
 
-        results = self.run_dbt(['run', '--select', 'state:modified', 'result:error', '--state', './state'], expect_pass=False)
+        results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 2
         assert results[0].node.name == 'view_model'
         assert results[1].node.name == 'table_model'
