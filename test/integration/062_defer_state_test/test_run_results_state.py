@@ -224,6 +224,47 @@ class TestRunResultsState(DBTIntegrationTest):
         print(results)
         assert len(results) == 2
         assert set(results) == {'test.table_model', 'test.unique_view_model_id'}
+
+
+    @use_profile('postgres')
+    def test_postgres_concurrent_selectors_run_results_state(self):
+        results = self.run_dbt(['run', '--select', 'state:modified', 'result:error', '--state', './state'])
+        assert len(results) == 0
+
+        # force an error on a dbt model
+        with open('models/view_model.sql') as fp:
+            fp.readline()
+            newline = fp.newlines
+
+        with open('models/view_model.sql', 'w') as fp:
+            fp.write(newline)
+            fp.write("select * from forced_error")
+            fp.write(newline)
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['run'], expect_pass=False)
+        self.copy_state()
+
+        # modify another dbt model
+        with open('models/table_model.sql', 'r') as fp:
+            contents = fp.readlines()
+
+        contents.insert(2, '--modified-state-comment')
+
+        with open('models/table_model.sql', 'w') as fp:
+            contents = "".join(contents)
+            fp.write(contents)
+
+        results = self.run_dbt(['run', '--select', 'state:modified', 'result:error', '--state', './state'], expect_pass=False)
+        assert len(results) == 2
+        assert results[0].node.name == 'view_model'
+        assert results[1].node.name == 'table_model'
+        
+        # results = self.run_dbt(['ls', '--select', 'state:modified', 'result:error', '--state', './state'])
+        # assert len(results) == 2
+        # assert set(results) == {'test.view_model', 'test.table_model'}
+
+
 ########
 
 # Matt's test cases below
