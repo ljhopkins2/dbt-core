@@ -256,10 +256,10 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 3
         # node index changes with each test invocation
-        assert results[0].node.name == 'table_model_modified_example'
-        assert results[1].node.name == 'view_model'
-        assert results[2].node.name == 'table_model'
-        
+        for x in range(0,2):
+            expected_node_names = ('table_model_modified_example', 'view_model', 'table_model')
+            print(results[x].node.name)
+            assert results[x].node.name in expected_node_names
 
 
 ########
