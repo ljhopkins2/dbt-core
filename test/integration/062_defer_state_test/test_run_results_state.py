@@ -260,8 +260,8 @@ class TestRunResultsState(DBTIntegrationTest):
         assert results[0].node.name == 'view_model'
         assert results[1].node.name == 'table_model'
         
-        # results = self.run_dbt(['ls', '--select', 'state:modified', 'result:error', '--state', './state'])
-        # assert len(results) == 2
+        # results = self.run_dbt(['ls', '--resource-type', 'model', '--select', 'state:modified+', 'result:error+', '--state', './state'])
+        # assert len(results) == 3
         # assert set(results) == {'test.view_model', 'test.table_model'}
 
 
