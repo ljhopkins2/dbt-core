@@ -327,7 +327,6 @@ class TestRunResultsState(DBTIntegrationTest):
             f.truncate()
         
         # rebuild - expect_pass = True because we changed the error to a warning this time around
-        # TODO: is this worth abstracting into a rebuild() function? YES
         self.rebuild_run_dbt(expect_pass=True)
 
         # test with warn selector
@@ -369,13 +368,13 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 3
         # node index changes with each test invocation
-        for x in range(0,2):
-            expected_node_names = ('table_model_modified_example', 'view_model', 'table_model')
-            assert results[x].node.name in expected_node_names
+        nodes = set([elem.node.name for elem in results])
+        assert nodes == {'view_model', 'table_model_modified_example', 'table_model'}
     
 
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_test_run_results_state(self):
+        #TODO MATT: replace with a result:fail+ example here as that will be a more realistic scenario to test
         results = self.run_dbt(['test', '--select', 'result:pass', '--exclude', 'not_null_view_model_id', '--state', './state'], expect_pass=True)
         assert len(results) == 1
         nodes = set([elem.node.name for elem in results])
