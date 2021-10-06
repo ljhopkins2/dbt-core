@@ -288,8 +288,69 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 2
         assert results[0].node.name == 'table_model'
         assert results[1].node.name == 'table_model_downstream'
-
     
+    
+    @use_profile('postgres')
+    def test_postgres_test_run_results_state(self):
+        # run passed nodes
+        results = self.run_dbt(['test', '--select', 'result:pass', '--state', './state'], expect_pass=True)
+        assert len(results) == 2
+        nodes = set([elem.node.name for elem in results])
+        assert nodes == {'unique_view_model_id', 'not_null_view_model_id'}
+        
+        # run passed nodes with + operator
+        results = self.run_dbt(['test', '--select', 'result:pass+', '--state', './state'], expect_pass=True)
+        assert len(results) == 2
+        nodes = set([elem.node.name for elem in results])
+        assert nodes == {'unique_view_model_id', 'not_null_view_model_id'}
+
+        # update view model to generate a failure case
+        os.remove('./models/view_model.sql')
+        with open('models/view_model.sql', 'w') as fp:
+            fp.write("select 1 as id union all select 1 as id")
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=False)
+        self.copy_state()
+
+        # test with failure selector
+        results = self.run_dbt(['test', '--select', 'result:fail', '--state', './state'], expect_pass=False)
+        assert len(results) == 1
+        assert results[0].node.name == 'unique_view_model_id'
+
+        # test with failure selector and + operator
+        # TODO: Does this make sense to test? Don't think tests depend on other tests
+        results = self.run_dbt(['test', '--select', 'result:fail+', '--state', './state'], expect_pass=False)
+        assert len(results) == 1
+        assert results[0].node.name == 'unique_view_model_id'
+
+        # change the unique test severity from error to warn and reuse the same view_model.sql changes above
+        # TODO: is this worth abstracting into a function?x
+        with open('models/schema.yml', 'r+') as f:
+            filedata = f.read()
+            newdata = filedata.replace('error','warn')
+            f.seek(0)
+            f.write(newdata)
+            f.truncate()
+        
+        # rebuild - expect_pass = True because we changed the error to a warning this time around
+        # TODO: is this worth abstracting into a rebuild() function?
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=True)
+        self.copy_state()
+
+        # test with warn selector
+        results = self.run_dbt(['test', '--select', 'result:warn', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
+        assert results[0].node.name == 'unique_view_model_id'
+
+        # test with warn selector and + operator
+        # TODO: Does this make sense to test? Don't think tests depend on other tests
+        results = self.run_dbt(['test', '--select', 'result:warn+', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
+        assert results[0].node.name == 'unique_view_model_id'
+
+
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_run_results_state(self):
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'])
