@@ -235,7 +235,7 @@ class TestRunResultsState(DBTIntegrationTest):
         
         # clear state and rerun upstream view model to test + operator
         shutil.rmtree('./state')
-        self.run_dbt(['run', '-m', 'view_model'], expect_pass=True)
+        self.run_dbt(['run', '--select', 'view_model'], expect_pass=True)
         self.copy_state()
         results = self.run_dbt(['run', '--select', 'result:success+', '--state', './state'], expect_pass=True)
         assert len(results) == 2
@@ -264,7 +264,7 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['run', '--select', 'result:error', '--state', './state'], expect_pass=False)
         assert len(results) == 1
         assert results[0].node.name == 'view_model'
-         
+        
         # test + operator selection on error
         results = self.run_dbt(['run', '--select', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 2
