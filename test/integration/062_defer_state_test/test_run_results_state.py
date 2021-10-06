@@ -8,12 +8,6 @@ import pytest
 
 from dbt.exceptions import CompilationException
 
-########
-
-# Sung's test cases below
-
-########
-
 class TestRunResultsState(DBTIntegrationTest):
     @property
     def schema(self):
@@ -419,9 +413,3 @@ class TestRunResultsState(DBTIntegrationTest):
         for x in range(0,4):
             expected_node_names = ('table_model_modified_example', 'view_model', 'table_model', 'not_null_view_model_id', 'unique_view_model_id')
             assert results[x].node.name in expected_node_names
-
-########
-
-# Matt's test cases below
-
-########
