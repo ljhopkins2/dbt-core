@@ -428,7 +428,6 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write(newline)
         
         results = self.run_dbt(['build', '--select', 'state:modified+', 'result:error+', 'result:fail+', '--state', './state'], expect_pass=False)
-        assert len(results) == 5 # TODO: Does this need to be the number of nodes? len and number of nodes are NOT the same here
-        expected_node_names = ('error_model', 'downstream_of_error_model', 'table_model_modified_example', 'view_model', 'table_model', 'unique_view_model_id', 'not_null_view_model_id')
-        for elem in results:
-            assert elem.node.name in expected_node_names
+        assert len(results) == 5
+        nodes = set([elem.node.name for elem in results])
+        assert nodes == {'error_model', 'downstream_of_error_model', 'table_model_modified_example', 'table_model', 'unique_view_model_id'}
