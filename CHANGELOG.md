@@ -10,6 +10,7 @@
 - Turns on the static parser by default and adds the flag `--no-static-parser` to disable it. ([#3377](https://github.com/dbt-labs/dbt/issues/3377), [#3939](https://github.com/dbt-labs/dbt/pull/3939))
 - Generic test FQNs have changed to include the relative path, resource, and column (if applicable) where they are defined. This makes it easier to configure them from the `tests` block in `dbt_project.yml` ([#3259](https://github.com/dbt-labs/dbt/pull/3259), [#3880](https://github.com/dbt-labs/dbt/pull/3880)
 - Turn on partial parsing by default ([#3867](https://github.com/dbt-labs/dbt/issues/3867), [#3989](https://github.com/dbt-labs/dbt/issues/3989))
+- Add `result:<status>` selectors to automatically rerun failed tests and erroneous models. This makes it easier to rerun failed dbt jobs with a simple selector flag instead of restarting from the beginning or manually running the dbt models in scope. ([#3859](https://github.com/dbt-labs/dbt/issues/3891), [#4017](https://github.com/dbt-labs/dbt/pull/4017))
 
 ### Fixes
 - Add generic tests defined on sources to the manifest once, not twice ([#3347](https://github.com/dbt-labs/dbt/issues/3347), [#3880](https://github.com/dbt-labs/dbt/pull/3880))
@@ -34,6 +35,8 @@ Contributors:
 - [@dave-connors-3](https://github.com/dave-connors-3) ([#3920](https://github.com/dbt-labs/dbt/issues/3920))
 - [@kadero](https://github.com/kadero) ([#3952](https://github.com/dbt-labs/dbt/issues/3952))
 - [@samlader](https://github.com/samlader) ([#3993](https://github.com/dbt-labs/dbt/pull/3993))
+- [@sungchun12](https://github.com/sungchun12) ([#4017](https://github.com/dbt-labs/dbt/pull/4017))
+- [@matt-winkler](https://github.com/matt-winkler) ([#4017](https://github.com/dbt-labs/dbt/pull/4017))
 
 ## dbt 0.21.0 (October 04, 2021)
 
