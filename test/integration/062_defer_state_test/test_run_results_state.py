@@ -51,6 +51,11 @@ class TestRunResultsState(DBTIntegrationTest):
         super().setUp()
         self.run_dbt(['build'])
         self.copy_state()
+    
+    def rebuild_run_dbt(self, expect_pass=True):
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=expect_pass)
+        self.copy_state()
 
     @use_profile('postgres')
     def test_postgres_seed_run_results_state(self):
@@ -136,9 +141,7 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write("select * from forced_error")
             fp.write(newline)
         
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=False)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=False)
 
         results = self.run_dbt(['build', '--select', 'result:error', '--state', './state'], expect_pass=False)
         assert len(results) == 3
@@ -166,9 +169,7 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write("select 1 as id union all select 1 as id")
             fp.write(newline)
         
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=False)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=False)
 
         results = self.run_dbt(['build', '--select', 'result:fail', '--state', './state'], expect_pass=False)
         assert len(results) == 1
@@ -199,9 +200,7 @@ class TestRunResultsState(DBTIntegrationTest):
         f.write(newdata)
         f.close()
 
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=True)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=True)
 
         results = self.run_dbt(['build', '--select', 'result:warn', '--state', './state'], expect_pass=True)
         assert len(results) == 1
@@ -305,9 +304,7 @@ class TestRunResultsState(DBTIntegrationTest):
         with open('models/view_model.sql', 'w') as fp:
             fp.write("select 1 as id union all select 1 as id")
         
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=False)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=False)
 
         # test with failure selector
         results = self.run_dbt(['test', '--select', 'result:fail', '--state', './state'], expect_pass=False)
@@ -329,9 +326,7 @@ class TestRunResultsState(DBTIntegrationTest):
         
         # rebuild - expect_pass = True because we changed the error to a warning this time around
         # TODO: is this worth abstracting into a rebuild() function? YES
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=True)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=True)
 
         # test with warn selector
         results = self.run_dbt(['test', '--select', 'result:warn', '--state', './state'], expect_pass=True)
@@ -400,9 +395,7 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write("select * from forced_error")
             fp.write(newline)
         
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=False)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=False)
 
         # modify another dbt model
         with open('models/table_model_modified_example.sql', 'w') as fp:
@@ -431,9 +424,7 @@ class TestRunResultsState(DBTIntegrationTest):
             f.write('select * from {{ ref("error_model") }} )')
         
         # regenerate build state
-        shutil.rmtree('./state')
-        self.run_dbt(['build'], expect_pass=False)
-        self.copy_state()
+        self.rebuild_run_dbt(expect_pass=False)
 
         # modify model again to trigger the state:modified selector 
         with open('models/table_model_modified_example.sql', 'w') as fp:
