@@ -384,8 +384,16 @@ class TestRunResultsState(DBTIntegrationTest):
         for x in range(0,2):
             expected_node_names = ('table_model_modified_example', 'view_model', 'table_model')
             assert results[x].node.name in expected_node_names
+    
 
-
+    @use_profile('postgres')
+    def test_postgres_concurrent_selectors_test_run_results_state(self):
+        results = self.run_dbt(['test', '--select', 'result:pass', '--exclude', 'not_null_view_model_id', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
+        nodes = set([elem.node.name for elem in results])
+        assert nodes == {'unique_view_model_id'}
+        
+        
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_build_run_results_state(self):
         results = self.run_dbt(['build', '--select', 'state:modified+', 'result:error+', '--state', './state'])
@@ -419,9 +427,34 @@ class TestRunResultsState(DBTIntegrationTest):
         for x in range(0,4):
             expected_node_names = ('table_model_modified_example', 'view_model', 'table_model', 'not_null_view_model_id', 'unique_view_model_id')
             assert results[x].node.name in expected_node_names
+        
+        # create failure test case for result:fail selector
+        os.remove('./models/view_model.sql')
+        with open('./models/view_model.sql', 'w') as f:
+            f.write('select 1 as id union all select 1 as id')
 
-########
+        # create error model case for result:error selector
+        with open('./models/error_model.sql', 'w') as f:
+            f.write('select 1 as id from not_exists')
+        
+        # create something downstream from the error model to rerun
+        with open('./models/downstream_of_error_model.sql', 'w') as f:
+            f.write('select * from {{ ref("error_model") }} )')
+        
+        # regenerate build state
+        shutil.rmtree('./state')
+        self.run_dbt(['build'], expect_pass=False)
+        self.copy_state()
 
-# Matt's test cases below
-
-########
+        # modify model again to trigger the state:modified selector 
+        with open('models/table_model_modified_example.sql', 'w') as fp:
+            fp.write(newline)
+            fp.write("select * from forced_another_error")
+            fp.write(newline)
+        
+        results = self.run_dbt(['build', '--select', 'state:modified+', 'result:error+', 'result:fail+', '--state', './state'], expect_pass=False)
+        assert len(results) == 5 # TODO: Does this need to be the number of nodes? len and number of nodes are NOT the same here
+        expected_node_names = ('error_model', 'downstream_of_error_model', 'table_model_modified_example', 'view_model', 'table_model', 'unique_view_model_id', 'not_null_view_model_id')
+        for elem in results:
+            assert elem.node.name in expected_node_names
+       
