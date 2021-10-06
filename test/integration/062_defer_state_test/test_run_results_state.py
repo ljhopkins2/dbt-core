@@ -151,8 +151,8 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['build', '--select', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 4
         assert results[0].node.name == 'view_model'
+        #TODO: add other named nodes besides the first one
 
-        #TODO: this feel wrong, I expect 4, but ls may work differently with node selection
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
         print(results)
         assert len(results) == 6 # includes exposure
@@ -177,12 +177,11 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 1
         assert results[0] == 'test.unique_view_model_id'
 
-        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
         results = self.run_dbt(['build', '--select', 'result:fail+', '--state', './state'], expect_pass=False)
         assert len(results) == 2 # includes table_model to be run
         assert results[0].node.name == 'unique_view_model_id'
+        #TODO: add other named nodes besides the first one
 
-        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
         results = self.run_dbt(['ls', '--select', 'result:fail+', '--state', './state'])
         print(results)
         assert len(results) == 2
@@ -209,12 +208,11 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 1
         assert results[0] == 'test.unique_view_model_id'
 
-        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
         results = self.run_dbt(['build', '--select', 'result:warn+', '--state', './state'], expect_pass=True)
         assert len(results) == 2 # includes table_model to be run
         assert results[0].node.name == 'unique_view_model_id'
+        #TODO: add other named nodes besides the first one
 
-        # TODO: this feels wrong, I expect 1, but there may be a relation I'm missing with node selection
         results = self.run_dbt(['ls', '--select', 'result:warn+', '--state', './state'])
         print(results)
         assert len(results) == 2
@@ -222,7 +220,6 @@ class TestRunResultsState(DBTIntegrationTest):
 
     @use_profile('postgres')
     def test_postgres_run_run_results_state(self):
-        # TODO: is this actually correct, or should the result selector also grab the ephemeral model?
         results = self.run_dbt(['run', '--select', 'result:success', '--state', './state'], expect_pass=True)
         assert len(results) == 2
         assert results[0].node.name == 'view_model'
@@ -314,13 +311,11 @@ class TestRunResultsState(DBTIntegrationTest):
         assert results[0].node.name == 'unique_view_model_id'
 
         # test with failure selector and + operator
-        # TODO: Does this make sense to test? Don't think tests depend on other tests
         results = self.run_dbt(['test', '--select', 'result:fail+', '--state', './state'], expect_pass=False)
         assert len(results) == 1
         assert results[0].node.name == 'unique_view_model_id'
 
         # change the unique test severity from error to warn and reuse the same view_model.sql changes above
-        # TODO: is this worth abstracting into a function?x
         with open('models/schema.yml', 'r+') as f:
             filedata = f.read()
             newdata = filedata.replace('error','warn')
@@ -329,7 +324,7 @@ class TestRunResultsState(DBTIntegrationTest):
             f.truncate()
         
         # rebuild - expect_pass = True because we changed the error to a warning this time around
-        # TODO: is this worth abstracting into a rebuild() function?
+        # TODO: is this worth abstracting into a rebuild() function? YES
         shutil.rmtree('./state')
         self.run_dbt(['build'], expect_pass=True)
         self.copy_state()
@@ -340,7 +335,6 @@ class TestRunResultsState(DBTIntegrationTest):
         assert results[0].node.name == 'unique_view_model_id'
 
         # test with warn selector and + operator
-        # TODO: Does this make sense to test? Don't think tests depend on other tests
         results = self.run_dbt(['test', '--select', 'result:warn+', '--state', './state'], expect_pass=True)
         assert len(results) == 1
         assert results[0].node.name == 'unique_view_model_id'
@@ -371,8 +365,6 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write("select * from forced_error")
             fp.write(newline)
         
-        #TODO: why is ephemeral_model not in the state?
-        # When I change it to a table materialization, it makes it into the run_results.json. This may be intentional behavior.
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 3
         # node index changes with each test invocation
@@ -414,8 +406,6 @@ class TestRunResultsState(DBTIntegrationTest):
             fp.write("select * from forced_error")
             fp.write(newline)
         
-        #TODO: why is ephemeral_model not in the state?
-        # When I change it to a table materialization, it makes it into the run_results.json. This may be intentional behavior.
         results = self.run_dbt(['build', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 5
         # node index changes with each test invocation
@@ -452,4 +442,3 @@ class TestRunResultsState(DBTIntegrationTest):
         expected_node_names = ('error_model', 'downstream_of_error_model', 'table_model_modified_example', 'view_model', 'table_model', 'unique_view_model_id', 'not_null_view_model_id')
         for elem in results:
             assert elem.node.name in expected_node_names
-       
