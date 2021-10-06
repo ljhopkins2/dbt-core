@@ -158,7 +158,6 @@ class TestRunResultsState(DBTIntegrationTest):
         assert nodes == {'table_model','view_model', 'not_null_view_model_id','unique_view_model_id'}
 
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
-        print(results)
         assert len(results) == 6 # includes exposure
         assert set(results) == {'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
@@ -180,13 +179,11 @@ class TestRunResultsState(DBTIntegrationTest):
         assert results[0] == 'test.unique_view_model_id'
 
         results = self.run_dbt(['build', '--select', 'result:fail+', '--state', './state'], expect_pass=False)
-        assert len(results) == 2 # includes table_model to be run
-        assert results[0].node.name == 'unique_view_model_id'
+        assert len(results) == 2
         nodes = set([elem.node.name for elem in results])
         assert nodes == {'table_model', 'unique_view_model_id'}
 
         results = self.run_dbt(['ls', '--select', 'result:fail+', '--state', './state'])
-        print(results)
         assert len(results) == 2
         assert set(results) == {'test.table_model', 'test.unique_view_model_id'}
 
@@ -215,7 +212,6 @@ class TestRunResultsState(DBTIntegrationTest):
         assert nodes == {'table_model', 'unique_view_model_id'}
 
         results = self.run_dbt(['ls', '--select', 'result:warn+', '--state', './state'])
-        print(results)
         assert len(results) == 2
         assert set(results) == {'test.table_model', 'test.unique_view_model_id'}
 
@@ -363,7 +359,6 @@ class TestRunResultsState(DBTIntegrationTest):
         
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 3
-        # node index changes with each test invocation
         nodes = set([elem.node.name for elem in results])
         assert nodes == {'view_model', 'table_model_modified_example', 'table_model'}
     
