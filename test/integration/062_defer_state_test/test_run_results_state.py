@@ -8,6 +8,7 @@ import pytest
 
 from dbt.exceptions import CompilationException
 
+
 class TestRunResultsState(DBTIntegrationTest):
     @property
     def schema(self):
