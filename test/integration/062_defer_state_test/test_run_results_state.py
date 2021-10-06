@@ -150,8 +150,9 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['build', '--select', 'result:error+', '--state', './state'], expect_pass=False)
         assert len(results) == 4
-        assert results[0].node.name == 'view_model'
-        #TODO: add other named nodes besides the first one
+        for x in range(0,3):
+            expected_node_names = ('table_model', 'view_model', 'not_null_view_model_id','unique_view_model_id')
+            assert results[x].node.name in expected_node_names
 
         results = self.run_dbt(['ls', '--select', 'result:error+', '--state', './state'])
         print(results)
@@ -180,7 +181,9 @@ class TestRunResultsState(DBTIntegrationTest):
         results = self.run_dbt(['build', '--select', 'result:fail+', '--state', './state'], expect_pass=False)
         assert len(results) == 2 # includes table_model to be run
         assert results[0].node.name == 'unique_view_model_id'
-        #TODO: add other named nodes besides the first one
+        for x in range(0,1):
+            expected_node_names = ('table_model', 'unique_view_model_id')
+            assert results[x].node.name in expected_node_names
 
         results = self.run_dbt(['ls', '--select', 'result:fail+', '--state', './state'])
         print(results)
@@ -210,8 +213,9 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['build', '--select', 'result:warn+', '--state', './state'], expect_pass=True)
         assert len(results) == 2 # includes table_model to be run
-        assert results[0].node.name == 'unique_view_model_id'
-        #TODO: add other named nodes besides the first one
+        for x in range(0,1):
+            expected_node_names = ('table_model', 'unique_view_model_id')
+            assert results[x].node.name in expected_node_names
 
         results = self.run_dbt(['ls', '--select', 'result:warn+', '--state', './state'])
         print(results)
