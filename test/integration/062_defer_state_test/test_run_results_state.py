@@ -145,7 +145,9 @@ class TestRunResultsState(DBTIntegrationTest):
 
         results = self.run_dbt(['build', '--select', 'result:error', '--state', './state'], expect_pass=False)
         assert len(results) == 3
-        assert results[0].node.name == 'view_model'
+        for x in range(0,2):
+            expected_node_names = ('view_model', 'not_null_view_model_id','unique_view_model_id')
+            assert results[x].node.name in expected_node_names
 
         results = self.run_dbt(['ls', '--select', 'result:error', '--state', './state'])
         assert len(results) == 3
