@@ -225,7 +225,71 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 2
         assert set(results) == {'test.table_model', 'test.unique_view_model_id'}
 
+    @use_profile('postgres')
+    def test_postgres_run_run_results_state(self):
+        # TODO: is this actually correct, or should the result selector also grab the ephemeral model?
+        results = self.run_dbt(['run', '--select', 'result:success', '--state', './state'], expect_pass=True)
+        assert len(results) == 2
+        assert results[0].node.name == 'view_model'
+        assert results[1].node.name == 'table_model'
+        
+        # clear state and rerun upstream view model to test + operator
+        shutil.rmtree('./state')
+        self.run_dbt(['run', '-m', 'view_model'], expect_pass=True)
+        self.copy_state()
+        results = self.run_dbt(['run', '--select', 'result:success+', '--state', './state'], expect_pass=True)
+        assert len(results) == 2
+        assert results[0].node.name == 'view_model'
+        assert results[1].node.name == 'table_model'
 
+        # check we are starting from a place with 0 errors
+        results = self.run_dbt(['run', '--select', 'result:error', '--state', './state'])
+        assert len(results) == 0
+        
+        # force an error in the view model to test error and skipped states
+        with open('models/view_model.sql') as fp:
+            fp.readline()
+            newline = fp.newlines
+
+        with open('models/view_model.sql', 'w') as fp:
+            fp.write(newline)
+            fp.write("select * from forced_error")
+            fp.write(newline)
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['run'], expect_pass=False)
+        self.copy_state()
+
+        # test single result selector on error
+        results = self.run_dbt(['run', '--select', 'result:error', '--state', './state'], expect_pass=False)
+        assert len(results) == 1
+        assert results[0].node.name == 'view_model'
+         
+        # test + operator selection on error
+        results = self.run_dbt(['run', '--select', 'result:error+', '--state', './state'], expect_pass=False)
+        assert len(results) == 2
+        assert results[0].node.name == 'view_model'
+        assert results[1].node.name == 'table_model'
+
+        # single result selector on skipped. Expect this to pass becase underlying view already defined above
+        results = self.run_dbt(['run', '--select', 'result:skipped', '--state', './state'], expect_pass=True)
+        assert len(results) == 1
+        assert results[0].node.name == 'table_model'
+
+        # add a downstream model that depends on table_model for skipped+ selector
+        with open('models/table_model_downstream.sql', 'w') as fp:
+            fp.write("select * from {{ref('table_model')}}")
+        
+        shutil.rmtree('./state')
+        self.run_dbt(['run'], expect_pass=False)
+        self.copy_state()
+
+        results = self.run_dbt(['run', '--select', 'result:skipped+', '--state', './state'], expect_pass=True)
+        assert len(results) == 2
+        assert results[0].node.name == 'table_model'
+        assert results[1].node.name == 'table_model_downstream'
+
+    
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_run_results_state(self):
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'])
