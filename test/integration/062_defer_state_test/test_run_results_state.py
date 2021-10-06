@@ -352,7 +352,7 @@ class TestRunResultsState(DBTIntegrationTest):
 
 
     @use_profile('postgres')
-    def test_postgres_concurrent_selectors_run_results_state(self):
+    def test_postgres_concurrent_selectors_run_run_results_state(self):
         results = self.run_dbt(['run', '--select', 'state:modified+', 'result:error+', '--state', './state'])
         assert len(results) == 0
 
