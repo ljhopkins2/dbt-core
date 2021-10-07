@@ -366,7 +366,16 @@ class TestRunResultsState(DBTIntegrationTest):
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_test_run_results_state(self):
         #TODO MATT: replace with a result:fail+ example here as that will be a more realistic scenario to test
-        results = self.run_dbt(['test', '--select', 'result:pass', '--exclude', 'not_null_view_model_id', '--state', './state'], expect_pass=True)
+        # create failure test case for result:fail selector
+        os.remove('./models/view_model.sql')
+        with open('./models/view_model.sql', 'w') as f:
+            f.write('select 1 as id union all select 1 as id union all select null as id')
+
+        # run dbt build again to trigger test errors
+        self.rebuild_run_dbt(expect_pass=False)
+        
+        # get the failures from 
+        results = self.run_dbt(['test', '--select', 'result:fail', '--exclude', 'not_null_view_model_id', '--state', './state'], expect_pass=False)
         assert len(results) == 1
         nodes = set([elem.node.name for elem in results])
         assert nodes == {'unique_view_model_id'}
