@@ -365,7 +365,6 @@ class TestRunResultsState(DBTIntegrationTest):
 
     @use_profile('postgres')
     def test_postgres_concurrent_selectors_test_run_results_state(self):
-        #TODO MATT: replace with a result:fail+ example here as that will be a more realistic scenario to test
         # create failure test case for result:fail selector
         os.remove('./models/view_model.sql')
         with open('./models/view_model.sql', 'w') as f:
