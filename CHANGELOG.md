@@ -18,6 +18,7 @@
 - Enable cataloging of unlogged Postgres tables ([3961](https://github.com/dbt-labs/dbt/issues/3961), [#3993](https://github.com/dbt-labs/dbt/pull/3993))
 - Fix multiple disabled nodes ([#4013](https://github.com/dbt-labs/dbt/issues/4013), [#4018](https://github.com/dbt-labs/dbt/pull/4018))
 - Fix multiple partial parsing errors ([#3996](https://github.com/dbt-labs/dbt/issues/3006), [#4020](https://github.com/dbt-labs/dbt/pull/4018))
+- Return an error instead of a warning when runing with `--warn-error` and no models are selected ([#4006](https://github.com/dbt-labs/dbt/issues/4006), [#4019](https://github.com/dbt-labs/dbt/pull/4019))
 
 ### Under the hood
 
@@ -41,6 +42,7 @@ Contributors:
 - [@sungchun12](https://github.com/sungchun12) ([#4017](https://github.com/dbt-labs/dbt/pull/4017))
 - [@matt-winkler](https://github.com/matt-winkler) ([#4017](https://github.com/dbt-labs/dbt/pull/4017))
 - [@yu-iskw](https://github.com/yu-iskw) ([#3967](https://github.com/dbt-labs/dbt/pull/3967))
+- [@laxjesse](https://github.com/laxjesse) ([#4019](https://github.com/dbt-labs/dbt/pull/4019))
 
 ## dbt 0.21.0 (October 04, 2021)
 
