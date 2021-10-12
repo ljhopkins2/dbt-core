@@ -1,5 +1,7 @@
 ## dbt 1.0.0 (Release TBD)
 
+## dbt 1.0.0b1 (October 11, 2021)
+
 ### Breaking changes
 
 - The two type of test definitions are now "singular" and "generic" (instead of "data" and "schema", respectively). The `test_type:` selection method accepts `test_type:singular` and `test_type:generic`. (It will also accept `test_type:schema` and `test_type:data` for backwards compatibility) ([#3234](https://github.com/dbt-labs/dbt/issues/3234), [#3880](https://github.com/dbt-labs/dbt/pull/3880)). **Not backwards compatible:** The `--data` and `--schema` flags to `dbt test` are no longer supported, and tests no longer have the tags `'data'` and `'schema'` automatically applied.
@@ -33,6 +35,7 @@
 - Change the default dbt packages installation directory to `dbt_packages` from `dbt_modules`.  Also rename `module-path` to `packages-install-path` to allow default overrides of package install directory.  Deprecation warning added for projects using the old `dbt_modules` name without specifying a `packages-install-path`.  ([#3523](https://github.com/dbt-labs/dbt/issues/3523))
 - Update the default project paths to be `analysis-paths = ['analyses']` and `test-paths = ['tests]`. Also have starter project set `analysis-paths: ['analyses']` from now on.  ([#2659](https://github.com/dbt-labs/dbt/issues/2659))
 - Define the data type of `sources` as an array of arrays of string in the manifest artifacts. ([#3966](https://github.com/dbt-labs/dbt/issues/3966), [#3967](https://github.com/dbt-labs/dbt/pull/3967))
+- Marked `source-paths` and `data-paths` as deprecated keys in `dbt_project.yml` in favor of `model-paths` and `seed-paths` respectively.([#1607](https://github.com/dbt-labs/dbt/issues/1607))
 
 Contributors:
 
