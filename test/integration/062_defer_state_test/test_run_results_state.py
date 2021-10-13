@@ -36,7 +36,7 @@ class TestRunResultsState(DBTIntegrationTest):
         for entry in os.listdir(self.test_original_source_path):
             src = os.path.join(self.test_original_source_path, entry)
             tst = os.path.join(self.test_root_dir, entry)
-            if entry in {'models', 'data', 'macros'}:
+            if entry in {'models', 'seeds', 'macros'}:
                 shutil.copytree(src, tst)
             elif os.path.isdir(entry) or entry.endswith('.sql'):
                 os.symlink(src, tst)
@@ -74,10 +74,10 @@ class TestRunResultsState(DBTIntegrationTest):
         assert len(results) == 7
         assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
-        with open('data/seed.csv') as fp:
+        with open('seeds/seed.csv') as fp:
             fp.readline()
             newline = fp.newlines
-        with open('data/seed.csv', 'a') as fp:
+        with open('seeds/seed.csv', 'a') as fp:
             fp.write(f'\"\'\'3,carl{newline}')
         shutil.rmtree('./state')
         self.run_dbt(['seed'], expect_pass=False)
@@ -96,10 +96,10 @@ class TestRunResultsState(DBTIntegrationTest):
         assert set(results) == {'test.seed', 'test.table_model', 'test.view_model', 'test.ephemeral_model', 'test.not_null_view_model_id', 'test.unique_view_model_id', 'exposure:test.my_exposure'}
 
 
-        with open('data/seed.csv') as fp:
+        with open('seeds/seed.csv') as fp:
             fp.readline()
             newline = fp.newlines
-        with open('data/seed.csv', 'a') as fp:
+        with open('seeds/seed.csv', 'a') as fp:
             # assume each line is ~2 bytes + len(name)
             target_size = 1*1024*1024
             line_size = 64
