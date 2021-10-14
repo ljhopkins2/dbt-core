@@ -1,7 +1,8 @@
-## dbt 0.21.1 (TBD)
+## dbt 0.21.1 (Release TBD)
 
 ### Fixes
 - Performance: Use child_map to find tests for nodes in resolve_graph ([#4012](https://github.com/dbt-labs/dbt/issues/4012), [#4057](https://github.com/dbt-labs/dbt/pull/4057))
+- Switch `unique_field` from abstractproperty to optional property. Add docstring ([#4025](https://github.com/dbt-labs/dbt-core/issues/4025), [#4028](https://github.com/dbt-labs/dbt-core/pull/4028))
 
 ## dbt 0.21.0 (October 04, 2021)
 
