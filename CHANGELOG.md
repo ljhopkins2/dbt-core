@@ -1,8 +1,9 @@
 ## dbt-core 1.0.0 (Release TBD)
 
-## dbt-core 1.0.0b1 (October 11, 2021)
+### Breaking changes
+- Enable `on-run-start` and `on-run-end` hooks for `dbt test`. Add `flags.WHICH` to execution context, representing current task ([#3463](https://github.com/dbt-labs/dbt-core/issues/3463), [#4004](https://github.com/dbt-labs/dbt-core/pull/4004))
 
-## dbt 1.0.0b1 (October 11, 2021)
+## dbt-core 1.0.0b1 (October 11, 2021)
 
 ### Breaking changes
 
